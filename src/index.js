@@ -30,6 +30,14 @@ console.log('[DB] SQLite initialized');
 
 const app = new Hono();
 
+// ---- Global: ensure all JSON responses include charset=utf-8 (mobile compat) ----
+app.use('*', async (c, next) => {
+  await next();
+  if (c.res.headers.get('content-type') === 'application/json') {
+    c.res.headers.set('content-type', 'application/json; charset=utf-8');
+  }
+});
+
 app.use('*', compress());
 app.use('*', cors({
   origin: process.env.CORS_ORIGIN || '*',
