@@ -15,6 +15,13 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const PORT = parseInt(process.env.PORT || '6689', 10);
+// ---- Helper: map DB hitokoto field to API content key ----
+function mapSentence(s) {
+  if (!s) return s;
+  const { hitokoto, ...rest } = s;
+  return { content: hitokoto || '', ...rest };
+}
+
 
 // Init DB on startup
 getDb();
@@ -73,18 +80,19 @@ app.get('/api/random', async (c) => {
   if (format === 'text') {
     c.header('Content-Type', 'text/plain; charset=utf-8');
     c.header('Cache-Control', 'no-cache');
-    return c.body(pick.hitokoto);
+    return c.body(pick.hitokoto); // text format keeps raw
   }
 
-  return c.json({
+  const response = {
     id: pick.id,
-    hitokoto: pick.hitokoto,
+    content: pick.hitokoto,
     type: pick.type,
     from: pick.from_source,
     from_who: pick.from_who,
     created_at: pick.created_at,
     length: pick.hitokoto.length,
-  });
+  };
+  return c.json(response);
 });
 
 // GET /api/sentences — 句子列表（分页+搜索）
@@ -95,7 +103,8 @@ app.get('/api/sentences', (c) => {
   const size = parseInt(c.req.query('size') || '20', 10);
 
   const result = getAllSentences({ type, keyword, page, size });
-  return c.json({ code: 200, ...result });
+  const mapped = { ...result, data: result.data.map(mapSentence) };
+  return c.json({ code: 200, ...mapped });
 });
 
 // GET /api/sentences/:id — 单条句子详情
@@ -103,7 +112,7 @@ app.get('/api/sentences/:id', (c) => {
   const id = parseInt(c.req.param('id'), 10);
   const sentence = getSentenceById(id);
   if (!sentence) return c.json({ code: 404, message: '未找到该句子' }, 404);
-  return c.json({ code: 200, data: sentence });
+  return c.json({ code: 200, data: mapSentence(sentence) });
 });
 
 // POST /api/sentences — 新增句子
@@ -115,12 +124,13 @@ app.post('/api/sentences', async (c) => {
     return c.json({ code: 400, message: '无效的 JSON 请求体' }, 400);
   }
 
-  if (!body.hitokoto || !body.hitokoto.trim()) {
+  const content = body.content || body.hitokoto;
+  if (!content || !content.trim()) {
     return c.json({ code: 400, message: '句子内容不能为空' }, 400);
   }
 
   const sentence = createSentence({
-    hitokoto: body.hitokoto.trim(),
+    hitokoto: content.trim(),
     type: body.type || 'other',
     from_source: body.from_source || '',
     from_who: body.from_who || '',
@@ -129,7 +139,7 @@ app.post('/api/sentences', async (c) => {
   // Invalidate cache
   await invalidateCache();
 
-  return c.json({ code: 200, message: '添加成功', data: sentence });
+  return c.json({ code: 200, message: '添加成功', data: mapSentence(sentence) });
 });
 
 // PUT /api/sentences/:id — 编辑句子
@@ -142,8 +152,9 @@ app.put('/api/sentences/:id', async (c) => {
     return c.json({ code: 400, message: '无效的 JSON 请求体' }, 400);
   }
 
+  const contentVal = body.content ?? body.hitokoto;
   const updated = updateSentence(id, {
-    hitokoto: body.hitokoto?.trim(),
+    hitokoto: contentVal?.trim(),
     type: body.type,
     from_source: body.from_source,
     from_who: body.from_who,
@@ -154,7 +165,7 @@ app.put('/api/sentences/:id', async (c) => {
   // Invalidate cache
   await invalidateCache();
 
-  return c.json({ code: 200, message: '更新成功', data: updated });
+  return c.json({ code: 200, message: '更新成功', data: mapSentence(updated) });
 });
 
 // DELETE /api/sentences/:id — 删除句子

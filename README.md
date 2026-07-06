@@ -144,7 +144,7 @@ curl -X POST http://localhost:37292/api/sentences \
 
 ### Docker Compose（推荐）
 
-参考：[compose.example.yaml](https://github.com/kuole-o/glean/compose.example.yaml)
+参考：[compose.example.yaml](https://github.com/kuole-o/glean/blob/main/compose.example.yaml)
 
 ### 数据持久化
 

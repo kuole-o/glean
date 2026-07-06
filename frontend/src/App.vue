@@ -24,7 +24,12 @@
 
     <div class="login-screen">
       <div class="login-card">
-        <h1 class="login-title">管理控制台</h1>
+        <div class="login-emoji-logo">
+          <span class="login-emoji">📖</span>
+          <span class="login-brand">拾句</span>
+          <span class="login-brand-sub">Glean</span>
+        </div>
+        <p class="login-subtitle">管理控制台</p>
         <p class="login-desc">登录以管理句子</p>
         <form @submit.prevent="doLogin">
           <div class="login-field">
@@ -57,7 +62,7 @@
           <span class="stats-badge">{{ statsText }}</span>
           <span class="stats-badge cache-badge">{{ cacheText }}</span>
           <!-- User Dropdown -->
-          <div class="user-dropdown" :class="{ open: dropdownOpen }" @click.stop="dropdownOpen = !dropdownOpen" @mouseenter="dropdownOpen = true" @mouseleave="dropdownOpen = false">
+          <div class="user-dropdown" :class="{ open: dropdownOpen }" @click.stop="dropdownOpen = !dropdownOpen" @mouseenter="clearTimeout(hoverTimeout); dropdownOpen = true" @mouseleave="hoverTimeout = setTimeout(() => { dropdownOpen = false }, 200)">
             <div class="user-trigger">
               <span class="user-avatar">{{ username.charAt(0).toUpperCase() }}</span>
               <span>{{ username }}</span>
@@ -110,7 +115,7 @@
             <tr v-for="s in sentences" :key="s.id">
               <td class="col-id">{{ s.id }}</td>
               <td class="col-content">
-                <span class="sentence-text" :title="s.hitokoto">{{ s.hitokoto }}</span>
+                <span class="sentence-text" :title="s.content">{{ s.content }}</span>
               </td>
               <td class="col-type">
                 <span class="type-tag" :class="typeClass(s.type)">{{ s.type }}</span>
@@ -162,7 +167,7 @@
         <div class="modal-body">
           <div class="form-group">
             <label>句子正文 <span class="required">*</span></label>
-            <textarea v-model="editForm.hitokoto" rows="3" placeholder="一句值得被记住的话…"></textarea>
+            <textarea v-model="editForm.content" rows="3" placeholder="一句值得被记住的话…"></textarea>
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -199,7 +204,7 @@
         </div>
         <div class="modal-body">
           <p>确定要删除以下句子吗？此操作不可撤销。</p>
-          <blockquote>{{ deleteTarget?.hitokoto }}</blockquote>
+          <blockquote>{{ deleteTarget?.content }}</blockquote>
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" @click="closeDeleteModal">取消</button>
@@ -233,9 +238,10 @@ export default {
 
     const username = ref('')
     const loggingIn = ref(false)
-    const loginForm = reactive({ username: 'root', password: '' })
+    const loginForm = reactive({ username: '', password: '' })
     const loginError = ref('')
     const dropdownOpen = ref(false)
+    const hoverTimeout = ref(null)
 
     // ---- Data State ----
     const sentences = ref([])
@@ -253,7 +259,7 @@ export default {
     // ---- Modal State ----
     const showEditModal = ref(false)
     const editingId = ref(null)
-    const editForm = reactive({ hitokoto: '', type: '', from_source: '', from_who: '' })
+    const editForm = reactive({ content: '', type: '', from_source: '', from_who: '' })
     const saving = ref(false)
     const showDeleteModal = ref(false)
     const deleteTarget = ref(null)
@@ -318,6 +324,9 @@ export default {
       api.clearToken()
       dropdownOpen.value = false
       loggedIn.value = false
+      username.value = ''
+      loginForm.username = ''
+      loginForm.password = ''
     }
 
     // ---- Admin Init ----
@@ -393,7 +402,7 @@ export default {
     // ---- Modals ----
     function openAddModal() {
       editingId.value = null
-      editForm.hitokoto = ''
+      editForm.content = ''
       editForm.type = categories.value[0] || ''
       editForm.from_source = ''
       editForm.from_who = ''
@@ -402,7 +411,7 @@ export default {
 
     function openEditModal(s) {
       editingId.value = s.id
-      editForm.hitokoto = s.hitokoto
+      editForm.content = s.content
       editForm.type = s.type
       editForm.from_source = s.from_source || ''
       editForm.from_who = s.from_who || ''
@@ -415,7 +424,7 @@ export default {
     }
 
     async function saveSentence() {
-      if (!editForm.hitokoto.trim()) {
+      if (!editForm.content.trim()) {
         showToast('句子内容不能为空', 'error')
         return
       }
@@ -549,7 +558,7 @@ export default {
       // Check auth
       const valid = await api.verifyToken()
       if (valid) {
-        username.value = 'root' // We can get this from verify response but simple for now
+        username.value = 'root' // reserved
         loggedIn.value = true
         await nextTick()
         initAdmin()
