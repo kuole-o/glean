@@ -15,6 +15,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const PORT = parseInt(process.env.PORT || '6689', 10);
+const CACHE_SIZE = parseInt(process.env.CACHE_SIZE || '5000', 10);
 // ---- Helper: map DB hitokoto field to API content key ----
 function mapSentence(s) {
   if (!s) return s;
@@ -65,7 +66,7 @@ app.get('/api/random', async (c) => {
 
   // Cache miss — fetch from DB
   if (!sentences) {
-    const result = getAllSentences({ type, size: 99999 });
+    const result = getAllSentences({ type, size: CACHE_SIZE });
     sentences = result.data;
     // Cache for next time
     await setCachedSentences(type || null, sentences);

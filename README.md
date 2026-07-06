@@ -138,6 +138,7 @@ curl -X POST http://localhost:37292/api/sentences \
 | `REDIS_PORT` | `6379` | Redis 端口 |
 | `REDIS_PASSWORD` | — | Redis 密码 |
 | `REDIS_DB` | `1` | Redis 数据库编号 |
+| `CACHE_SIZE` | `5000` | 随机句子缓存最大条数，超出部分不进入随机池 |
 | `CACHE_TTL` | `60` | 缓存有效期（秒） |
 
 ## 部署
@@ -155,7 +156,7 @@ SQLite 数据库文件存储在 `./data/glean.db`，通过 Docker volume 挂载�
 - **后端：** Node.js 20 + [Hono.js](https://hono.dev/) — 轻量、高性能 Web 框架
 - **数据库：** SQLite ([better-sqlite3](https://github.com/WiseLibs/better-sqlite3)) — 零配置，ACID 保障
 - **缓存：** Redis ([ioredis](https://github.com/redis/ioredis)) — 可选加速
-- **前端：** 原生 HTML/CSS/JS — 无构建工具，零依赖
+- **前端：** Vue 3 + Vite — 单页应用，构建工具自动化打包
 - **容器：** Docker — 多阶段构建，镜像约 100MB
 
 ## 版本记录

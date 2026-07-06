@@ -52,16 +52,17 @@ export async function login(username, password) {
 
 export async function verifyToken() {
   const token = getToken()
-  if (!token) return false
+  if (!token) return null
   try {
     const res = await fetch(BASE + '/api/auth/verify', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` },
     })
     const j = await res.json()
-    return j.code === 200
+    if (j.code === 200) return j.data
+    return null
   } catch {
-    return false
+    return null
   }
 }
 

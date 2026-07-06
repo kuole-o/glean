@@ -555,9 +555,9 @@ export default {
       if (si.code === 200) siteInfo.value = si.data
 
       // Check auth
-      const valid = await api.verifyToken()
-      if (valid) {
-        username.value = 'root' // reserved
+      const userData = await api.verifyToken()
+      if (userData) {
+        username.value = userData.username
         loggedIn.value = true
         await nextTick()
         initAdmin()
