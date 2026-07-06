@@ -86,13 +86,13 @@ curl "http://localhost:37292/api/random?type=文学&format=text"
 
 ```json
 {
-  "id": 1,
-  "hitokoto": "用代码表达言语的魅力，用代码书写山河的壮丽。",
-  "type": "网络",
-  "from": "一言开发者中心",
-  "from_who": "一言",
-  "created_at": "2026-07-06 20:13:36",
-  "length": 22
+  "id": 2,
+  "content": "生活就像骑绿道，上坡累成狗，下坡爽翻天。",
+  "type": "原创",
+  "from": "骑行日记",
+  "from_who": "郭乐",
+  "created_at": "2026-07-07 02:05:39",
+  "length": 20
 }
 ```
 

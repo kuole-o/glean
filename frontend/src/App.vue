@@ -29,8 +29,7 @@
           <span class="login-brand">拾句</span>
           <span class="login-brand-sub">Glean</span>
         </div>
-        <p class="login-subtitle">管理控制台</p>
-        <p class="login-desc">登录以管理句子</p>
+        <p class="login-subtitle">登录以管理句子</p>
         <form @submit.prevent="doLogin">
           <div class="login-field">
             <input v-model="loginForm.username" type="text" placeholder="用户名" autocomplete="off">
