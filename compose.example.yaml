@@ -1,0 +1,57 @@
+# 🚀 Glean — 拾句 · Self-hosted sentence management service
+# ================================================================
+# Copy this file to docker-compose.yaml and fill in your settings.
+# 复制此文件为 docker-compose.yaml 并填入你的配置。
+# ================================================================
+#
+# Quick start / 快速启动:
+#   docker compose up -d
+#
+# Default admin login / 默认管理后台:
+#   http://your-host:37292  (user: root / pass: 666)
+
+version: "3.8"
+
+services:
+  glean:
+    build: .
+    image: glean:latest
+    container_name: glean
+    restart: always
+    ports:
+      # HOST_PORT:CONTAINER_PORT — change the left side if 37292 conflicts
+      # 左侧端口如冲突可自行修改
+      - "37292:6689"
+    volumes:
+      # Persist SQLite database on the host
+      # SQLite 数据库持久化到宿主机
+      - "./data:/app/data"
+    environment:
+      # ---- Core / 核心 ----
+      - NODE_ENV=production
+      - PORT=6689
+
+      # ---- Redis Cache (optional / 可选; comment out to disable / 注释掉即关闭) ----
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=your-redis-password          # uncomment if Redis auth is enabled
+      - REDIS_DB=1
+      - CACHE_TTL=60                                  # seconds / 秒
+
+      # ---- Categories / 分类列表 ----
+      # Comma-separated list. Uncomment to customize / 逗号分隔，取消注释自定义
+      - CATEGORIES=原创,动画,漫画,游戏,文学,网络,影视,诗词,哲学,抖机灵,其他
+
+      # ---- CORS ----
+      - CORS_ORIGIN=* # https://example.com
+
+      # ---- Site Footer / 页脚 ----
+      # - SITE_ICP=粤ICP备XXXXXXXX号-X
+      # - SITE_AUTHOR=YourName
+      # - SITE_YEAR=2025
+      - SITE_COPYRIGHT=true
+
+      # ---- Auth / 管理后台登录 ----
+      - AUTH_USERNAME=root              # change it! / 请修改！
+      - AUTH_PASSWORD=666               # change it! / 请修改！
+      # - JWT_SECRET=your-32-byte-hex    # optional / 可选
