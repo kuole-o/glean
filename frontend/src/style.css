@@ -343,11 +343,13 @@ body {
   border-radius: var(--radius-lg);
   overflow-x: auto;
   overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 .sentence-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto;
+  min-width: 800px;
 }
 .sentence-table th {
   padding: 0;
@@ -374,18 +376,55 @@ body {
   font-size: 14px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
-  overflow: hidden;
+  overflow: hidden;          /* 配合省略号 */
+  white-space: nowrap;       /* 防止换行 */
+  text-overflow: ellipsis;   /* 超出省略 */
 }
 .sentence-table tr:hover td { background: var(--bg-hover); }
 .sentence-table tr:last-child td { border-bottom: none; }
-.col-id { width: 50px; }
-.col-content { min-width: 180px; }
-.col-type { width: 72px; }
-.col-source { width: 110px; }
-.col-who { width: 90px; }
-.col-time { width: 130px; }
-.col-actions { width: 110px; text-align: center; }
 
+/* ---- 列宽控制（min-width + max-width） ---- */
+.col-id      { min-width: 50px;  max-width: 60px; }
+.col-content { min-width: 180px; max-width: 260px; }  /* 句子列最大260px */
+.col-type    { min-width: 72px;  max-width: 90px; }
+.col-source  { min-width: 110px; max-width: 160px; }
+.col-who     { min-width: 90px;  max-width: 130px; }
+.col-time    { min-width: 130px; max-width: 150px; }
+
+/* 操作列特殊处理 */
+.col-actions {
+  min-width: 110px;
+  max-width: 130px;          /* 限制按钮区域宽度 */
+  text-align: center;
+  position: sticky;          /* 固定 */
+  right: 0;
+  background-color: var(--bg-secondary);  /* td 背景 */
+  z-index: 2;
+}
+
+/* 表头操作列：强制 sticky（覆盖 th 的 position: relative） */
+.sentence-table thead th.col-actions {
+  position: sticky !important;
+  right: 0;
+  background-color: var(--bg-tertiary);
+  z-index: 3;
+  /* 隐藏该列的拖拽手柄，避免影响 sticky */
+  .th-resizer { display: none; }
+}
+
+/* 操作列左侧阴影 */
+.sentence-table .col-actions::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -6px;
+  width: 6px;
+  height: 100%;
+  background: linear-gradient(to right, rgba(0,0,0,0.15), transparent);
+  pointer-events: none;
+}
+
+/* 拖拽手柄 */
 .th-resizer {
   position: absolute;
   top: 0;
@@ -402,13 +441,14 @@ body {
   opacity: 0.5;
 }
 
+/* 句子文本的省略号展示 */
 .sentence-text {
   cursor: pointer;
-  max-width: 380px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   display: inline-block;
+  max-width: 100%;           /* 继承单元格的 max-width */
 }
 .sentence-text:hover { color: var(--accent); }
 
@@ -421,6 +461,10 @@ body {
   background: var(--bg-tertiary);
   color: var(--text-secondary);
   border: 1px solid var(--border);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .loading-cell {
@@ -639,7 +683,6 @@ body {
   color: var(--text-muted);
   font-size: 14px;
 }
-
 
 @media (max-width: 768px) {
   .header-inner { padding: 8px 14px; }

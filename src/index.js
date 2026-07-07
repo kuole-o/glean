@@ -90,6 +90,8 @@ app.get('/api/whoami', (c) => {
 app.get('/api/random', async (c) => {
   const type = c.req.query('type');
   const format = c.req.query('format') || 'json';
+  const cacheStatus = getCacheStatus();
+  const redisOn = cacheStatus.enabled;
 
   // Try cache first
   let sentences = null;
@@ -100,7 +102,21 @@ app.get('/api/random', async (c) => {
   }
 
   // Cache miss — fetch from DB
-  if (!sentences) {
+  if (sentences) {
+    console.log(
+      `[Cache] HIT  ${c.req.method} ${c.req.path}  type=${type || 'all'}  redis:enabled`
+    );
+  } else {
+    if (redisOn) {
+      console.log(
+        `[Cache] MISS ${c.req.method} ${c.req.path}  type=${type || 'all'}  fetching from SQLite`
+      );
+    } else {
+      console.log(
+        `[SQLite] QUERY ${c.req.method} ${c.req.path}  type=${type || 'all'}  (Redis disabled)`
+      );
+    }
+
     const result = getAllSentences({ type, size: CACHE_SIZE });
     sentences = result.data;
     // Cache for next time

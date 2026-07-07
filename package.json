@@ -1,6 +1,6 @@
 {
   "name": "glean",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "拾句 (Glean) — 拾取散落的好句。自建句子管理服务，随机文案 API。",
   "main": "src/index.js",
   "type": "module",

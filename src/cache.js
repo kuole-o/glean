@@ -96,7 +96,7 @@ export async function invalidateCache() {
         await client.del(...keys);
       }
     } while (cursor !== '0');
-    console.log('[Cache] Invalidated all glean cache keys');
+    console.log('[Cache] CRUD operations invalidated all glean cache keys');
   } catch {
     // silently fail
   }

@@ -95,7 +95,7 @@ curl "http://localhost:37292/api/random?type=文学&format=text"
   "content": "生活就像骑绿道，上坡累成狗，下坡爽翻天。",
   "type": "原创",
   "from": "骑行日记",
-  "from_who": "郭乐",
+  "from_who": "kuole-o",
   "created_at": "2026-07-07 02:05:39",
   "length": 20
 }
@@ -123,7 +123,7 @@ curl -X POST http://localhost:37292/api/sentences \
     "content": "生活就像骑绿道，上坡累成狗，下坡爽翻天。",
     "type": "原创",
     "from_source": "骑行日记",
-    "from_who": "郭乐"
+    "from_who": "kuole-o"
   }'
 ```
 

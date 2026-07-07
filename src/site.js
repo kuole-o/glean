@@ -1,7 +1,14 @@
 export function getSiteInfo() {
   const year = parseInt(process.env.SITE_YEAR, 10);
   const currentYear = new Date().getFullYear();
-  const yearRange = year ? `${year} - ${currentYear}` : `${currentYear}`;
+  let yearRange;
+  if (year > 0 && year <= currentYear) {
+    yearRange = year === currentYear
+      ? `${currentYear}`
+      : `${year} - ${currentYear}`;
+  } else {
+    yearRange = `${currentYear}`;
+  }
 
   const showCopyright = process.env.SITE_COPYRIGHT !== 'false';
   const author = process.env.SITE_AUTHOR || '';
