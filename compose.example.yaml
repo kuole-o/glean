@@ -40,7 +40,7 @@ services:
 
       # ---- Categories / 分类列表 ----
       # Comma-separated list. Uncomment to customize / 逗号分隔，取消注释自定义
-      - CATEGORIES=原创,动画,漫画,游戏,文学,网络,影视,诗词,哲学,抖机灵,其他
+      - CATEGORIES=原创,动画,歌词,游戏,文学,网络,影视,诗词,哲学,抖机灵,其他
 
       # ---- CORS ----
       - CORS_ORIGIN=* # https://example.com
@@ -61,7 +61,7 @@ services:
       # 反代真实 IP：Lucky/Nginx 等反代后，容器看到的源 IP 是代理的 LAN 地址，
       # 必须让 glean 从转发头还原真实客户端 IP，否则限流/防暴力会把所有人算作一个 IP。
       # 推荐用 TRUSTED_PROXY_IPS 锁定可信代理（防局域网内伪造），而非无条件的 TRUST_PROXY。
-      # 填你的反代来源 IP（路由器/NAS 网关的 LAN 地址，如 192.168.1.1）。
+      # 填你的反代来源 IP
       - TRUSTED_PROXY_IPS=192.168.1.1   # your reverse-proxy LAN IP(s), comma-separated; supports CIDR
       # - TRUST_PROXY=true                # 简单模式(无条件信任转发头)，仅当 glean 端口不对外暴露时用
       # 诊断：首次部署后临时设为 true，从手机 4G 访问 /api/whoami 确认反代传了真实 IP，之后请关闭
