@@ -1,0 +1,20 @@
+# Keep the Docker build context small. The image builds the frontend and
+# installs deps from scratch (see Dockerfile), so local artifacts are noise.
+node_modules
+frontend/node_modules
+
+# Frontend build output — rebuilt inside the image by the frontend-builder stage.
+public
+
+# Runtime data / local DB — must never leak into the image.
+data
+*.db
+*.db-shm
+*.db-wal
+
+# Local compose override and misc.
+docker-compose.yaml
+.git
+.gitignore
+.DS_Store
+npm-debug.log*

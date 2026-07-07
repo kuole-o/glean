@@ -25,7 +25,7 @@ export function getDb() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS sentences (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      hitokoto    TEXT    NOT NULL,
+      content    TEXT    NOT NULL,
       type        TEXT    DEFAULT 'other',
       from_source TEXT    DEFAULT '',
       from_who    TEXT    DEFAULT '',
@@ -53,7 +53,7 @@ export function getAllSentences({ type, keyword, page = 1, size = 20 } = {}) {
   }
 
   if (keyword) {
-    conditions.push('(hitokoto LIKE ? OR from_source LIKE ? OR from_who LIKE ?)');
+    conditions.push('(content LIKE ? OR from_source LIKE ? OR from_who LIKE ?)');
     const kw = `%${keyword}%`;
     params.push(kw, kw, kw);
   }
@@ -90,26 +90,26 @@ export function getSentenceById(id) {
   return db.prepare('SELECT * FROM sentences WHERE id = ?').get(id);
 }
 
-export function createSentence({ hitokoto, type, from_source, from_who }) {
+export function createSentence({ content, type, from_source, from_who }) {
   const db = getDb();
   const stmt = db.prepare(`
-    INSERT INTO sentences (hitokoto, type, from_source, from_who)
+    INSERT INTO sentences (content, type, from_source, from_who)
     VALUES (?, ?, ?, ?)
   `);
-  const result = stmt.run(hitokoto, type || 'other', from_source || '', from_who || '');
+  const result = stmt.run(content, type || 'other', from_source || '', from_who || '');
   return getSentenceById(result.lastInsertRowid);
 }
 
-export function updateSentence(id, { hitokoto, type, from_source, from_who }) {
+export function updateSentence(id, { content, type, from_source, from_who }) {
   const db = getDb();
   const existing = getSentenceById(id);
   if (!existing) return null;
 
   db.prepare(`
-    UPDATE sentences SET hitokoto=?, type=?, from_source=?, from_who=?, updated_at=datetime('now','localtime')
+    UPDATE sentences SET content=?, type=?, from_source=?, from_who=?, updated_at=datetime('now','localtime')
     WHERE id=?
   `).run(
-    hitokoto ?? existing.hitokoto,
+    content ?? existing.content,
     type ?? existing.type,
     from_source ?? existing.from_source,
     from_who ?? existing.from_who,

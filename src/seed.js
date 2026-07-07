@@ -1,28 +1,45 @@
-import { getDb, createSentence } from './db.js';
+import { getDb, createSentence, getStats } from './db.js';
+import { getCategories } from './categories.js';
 
 getDb();
 
-const defaultSentences = [
-  { hitokoto: '用代码表达言语的魅力，用代码书写山河的壮丽。', type: '网络', from_source: '一言开发者中心', from_who: '一言' },
-  { hitokoto: '我们不写代码，我们只是自然语言的搬运工。', type: '原创', from_source: '强哥语录', from_who: '强哥' },
-  { hitokoto: '生活就像骑绿道，上坡累成狗，下坡爽翻天。', type: '原创', from_source: '骑行日记', from_who: '强哥' },
-  { hitokoto: '路漫漫其修远兮，吾将上下而求索。', type: '诗词', from_source: '离骚', from_who: '屈原' },
-  { hitokoto: '世界上只有一种真正的英雄主义，那就是在认清生活真相之后依然热爱生活。', type: '文学', from_source: '名人传记', from_who: '罗曼·罗兰' },
-  { hitokoto: '把握生命里的每一分钟，全力以赴我们心中的梦。', type: '影视', from_source: '《真心英雄》', from_who: '周华健' },
-  { hitokoto: '人如果没有梦想，那和咸鱼有什么区别。', type: '影视', from_source: '《少林足球》', from_who: '周星驰' },
-  { hitokoto: '有些路很远，走下去会很累，可是不走，会后悔。', type: '网络', from_source: '网络', from_who: '' },
-  { hitokoto: '编程最重要的是实践，不是理论。', type: '原创', from_source: '强哥的思考', from_who: '强哥' },
-  { hitokoto: '人生就像一场马拉松，关键不是瞬间的爆发，而是途中的坚持。', type: '网络', from_source: '网络', from_who: '' },
-];
+// One curated sentence per known category. Keyed by category name so that
+// `CATEGORIES` env overrides still line up — any category present here gets a
+// hand-picked line, anything else falls back to a generic placeholder.
+const CURATED = {
+  原创:   { content: '我们不写代码，我们只是自然语言的搬运工。', from_source: '佚名语录', from_who: '佚名' },
+  动画:   { content: '曾经发生的事情不可能忘记，只是暂时想不起来而已。', from_source: '《千与千寻》', from_who: '钱婆婆' },
+  歌词:   { content: '故事的小黄花，从出生那年就飘着。', from_source: '《晴天》', from_who: '周杰伦' },
+  游戏:   { content: '为了艾泽拉斯！', from_source: '《魔兽世界》', from_who: '' },
+  文学:   { content: '世界上只有一种真正的英雄主义，那就是在认清生活真相之后依然热爱生活。', from_source: '《米开朗琪罗传》', from_who: '罗曼·罗兰' },
+  网络:   { content: '有些路很远，走下去会很累，可是不走，会后悔。', from_source: '网络', from_who: '' },
+  影视:   { content: '人如果没有梦想，那和咸鱼有什么区别。', from_source: '《少林足球》', from_who: '周星驰' },
+  诗词:   { content: '路漫漫其修远兮，吾将上下而求索。', from_source: '《离骚》', from_who: '屈原' },
+  哲学:   { content: '人不能两次踏进同一条河流。', from_source: '古希腊哲学', from_who: '赫拉克利特' },
+  抖机灵: { content: '生活就像骑绿道，上坡累成狗，下坡爽翻天。', from_source: '骑行日记', from_who: '' },
+  其他:   { content: '把握生命里的每一分钟，全力以赴我们心中的梦。', from_source: '《真心英雄》', from_who: '周华健' },
+};
 
-const { getStats } = await import('./db.js');
+function sentenceFor(category) {
+  const curated = CURATED[category];
+  if (curated) return { type: category, ...curated };
+  // Custom category with no curated line — insert a friendly placeholder.
+  return {
+    content: `这是「${category}」分类的示例句子，快来添加属于你的好句吧。`,
+    type: category,
+    from_source: '示例',
+    from_who: '',
+  };
+}
+
 const stats = getStats();
 if (stats.total === 0) {
-  for (const s of defaultSentences) {
-    createSentence(s);
+  const categories = getCategories();
+  for (const category of categories) {
+    createSentence(sentenceFor(category));
   }
-  console.log(`✅ Inserted ${defaultSentences.length} default sentences`);
+  console.log(`✅ Inserted ${categories.length} sample sentences (one per category)`);
 } else {
   console.log(`ℹ️ DB already has ${stats.total} records, skipping seed`);
 }
-console.log(`📊 DB path: data/hitokoto.db`);
+console.log('📊 DB path: data/glean.db');

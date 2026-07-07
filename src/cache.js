@@ -79,7 +79,7 @@ export async function setCachedSentences(type, data) {
 }
 
 /**
- * Invalidate all hitokoto cache keys (on CRUD operations).
+ * Invalidate all glean cache keys (on CRUD operations).
  */
 export async function invalidateCache() {
   const client = getRedis();
@@ -96,7 +96,7 @@ export async function invalidateCache() {
         await client.del(...keys);
       }
     } while (cursor !== '0');
-    console.log('[Cache] Invalidated all hitokoto cache keys');
+    console.log('[Cache] Invalidated all glean cache keys');
   } catch {
     // silently fail
   }

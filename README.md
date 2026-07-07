@@ -14,7 +14,7 @@
 
 「拾句」—— 拾取散落的好句。**Glean**，意为从各处精心收集有价值的信息碎片。
 
-项目灵感来自 [一言 (Hitokoto)](https://hitokoto.cn)。一言的创意很好，但内容质量参差不齐——偶尔会遇到画风过于中二或不知所云的句子。拾句的初衷很简单：**建设私人文案摘选库**
+项目灵感来自市面上常见的「随机一句」服务。这类服务创意很好，但公共内容质量参差不齐——偶尔会遇到画风过于中二或不知所云的句子。拾句的初衷很简单：**建设私人文案摘选库**
 
 ## 功能特性
 
@@ -46,10 +46,15 @@ docker compose up -d
 
 ```bash
 # 需要 Node.js 20+
-npm install
-npm start
-# 服务运行在 http://localhost:6689
+npm install                       # 安装后端依赖
+npm run build                     # 构建前端到 public/（首次或前端有改动时必须执行）
+AUTH_PASSWORD=你的密码 npm start   # 服务运行在 http://localhost:6689
+
+# 或一步到位：构建 + 启动
+AUTH_PASSWORD=你的密码 npm run build:start
 ```
+
+> 说明：前端构建产物 `public/` 不纳入版本控制，由 `npm run build` 生成；Docker 部署会在镜像内自动构建，无需手动执行。默认密码为 `666`，服务仍可启动但会打印安全告警，建议通过 `AUTH_PASSWORD` 设置一个强密码（详见下方环境变量）。
 
 ## API 文档
 
@@ -115,7 +120,7 @@ curl "http://localhost:37292/api/random?type=文学&format=text"
 curl -X POST http://localhost:37292/api/sentences \
   -H "Content-Type: application/json" \
   -d '{
-    "hitokoto": "生活就像骑绿道，上坡累成狗，下坡爽翻天。",
+    "content": "生活就像骑绿道，上坡累成狗，下坡爽翻天。",
     "type": "原创",
     "from_source": "骑行日记",
     "from_who": "郭乐"
@@ -140,6 +145,24 @@ curl -X POST http://localhost:37292/api/sentences \
 | `REDIS_DB` | `1` | Redis 数据库编号 |
 | `CACHE_SIZE` | `5000` | 随机句子缓存最大条数，超出部分不进入随机池 |
 | `CACHE_TTL` | `60` | 缓存有效期（秒） |
+
+### 安全相关（公网部署建议配置）
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `AUTH_USERNAME` | `root` | 管理后台用户名 |
+| `AUTH_PASSWORD` | `666` | 管理后台密码。使用默认值时服务仍会启动，但会打印安全告警，公网部署务必设置强密码 |
+| `JWT_SECRET` | 随机生成 | 令牌签名密钥。不设置则每次重启失效所有登录，公网务必固定 |
+| `TOKEN_EXPIRY` | `24h` | 登录令牌有效期 |
+| `TRUST_PROXY` | `false` | 简单模式：无条件信任 `X-Forwarded-For` / `X-Real-IP`。仅在你确信 glean 端口不暴露、只有反代能访问时使用 |
+| `TRUSTED_PROXY_IPS` | — | **推荐**：可信反代 IP/网段列表（逗号分隔，如 `192.168.1.1,172.16.0.0/12`）。仅当直连来源在此列表内才采信转发头，可防局域网内伪造。反代部署必填 |
+| `WHOAMI_ENABLED` | `false` | 诊断开关。设为 `true` 时开放 `GET /api/whoami` 回显代理转发的头与解析出的真实 IP，用于确认反代配置；确认后请关闭 |
+| `RATE_LIMIT_ENABLED` | `true` | 是否启用全局接口限流（含随机文案接口） |
+| `RATE_LIMIT_WINDOW` | `60` | 限流时间窗口（秒） |
+| `RATE_LIMIT_MAX` | `120` | 单个 IP 在窗口内的最大请求数，超出返回 429 |
+| `LOGIN_LOCKOUT_ENABLED` | `true` | 是否启用登录暴力破解锁定 |
+| `LOGIN_MAX_FAILS` | `5` | 登录连续失败次数达到此值后锁定该 IP |
+| `LOGIN_LOCKOUT_WINDOW` | `900` | 锁定时长（秒），默认 15 分钟 |
 
 ## 部署
 

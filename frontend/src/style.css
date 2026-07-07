@@ -422,10 +422,6 @@ body {
   color: var(--text-secondary);
   border: 1px solid var(--border);
 }
-.type-tag.original { color: #7ee787; border-color: #238636; }
-.type-tag.network { color: #79c0ff; border-color: #1f6feb; }
-.type-tag.poem { color: #d2a8ff; border-color: #6f42c1; }
-.type-tag.movie { color: #ffa657; border-color: #d29922; }
 
 .loading-cell {
   text-align: center;

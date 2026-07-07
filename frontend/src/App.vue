@@ -117,7 +117,7 @@
                 <span class="sentence-text" :title="s.content">{{ s.content }}</span>
               </td>
               <td class="col-type">
-                <span class="type-tag" :class="typeClass(s.type)">{{ s.type }}</span>
+                <span class="type-tag" :style="tagStyle(s.type)">{{ s.type }}</span>
               </td>
               <td class="col-source">{{ s.from_source || '-' }}</td>
               <td class="col-who">{{ s.from_who || '-' }}</td>
@@ -389,13 +389,50 @@ export default {
       }
     }
 
-    function typeClass(t) {
-      const lower = (t || '').toLowerCase()
-      if (lower.includes('原创')) return 'original'
-      if (lower.includes('网络')) return 'network'
-      if (lower.includes('诗词') || lower.includes('诗歌')) return 'poem'
-      if (lower.includes('影视') || lower.includes('动画') || lower.includes('漫画') || lower.includes('游戏')) return 'movie'
-      return ''
+    // ---- Tag colors ----
+    // Preset semantic colors for the built-in categories (text / border pairs
+    // chosen to fit the dark theme). 歌词 uses a NetEase-Cloud-style red.
+    const PRESET_TAG_COLORS = {
+      原创:   ['#7ee787', '#238636'], // 生长绿
+      动画:   ['#ff9ec5', '#db2777'], // 二次元粉
+      歌词:   ['#ff5a5f', '#c20c0c'], // 网易云红
+      游戏:   ['#56d4dd', '#0e7490'], // 电竞青
+      文学:   ['#e3b341', '#9e6a03'], // 书卷金
+      网络:   ['#79c0ff', '#1f6feb'], // 网络蓝
+      影视:   ['#ffa657', '#d29922'], // 光影橙
+      诗词:   ['#d2a8ff', '#6f42c1'], // 诗意紫
+      哲学:   ['#a5b4fc', '#4f46e5'], // 思辨靛
+      抖机灵: ['#b5e853', '#5e8a00'], // 灵光黄绿
+      其他:   ['#8b949e', '#484f58'], // 中性灰
+    }
+
+    // Fallback palette for user-defined categories not in the preset map.
+    // Assigned by position in the category list, cycling when it overflows.
+    const TAG_PALETTE = [
+      ['#7ee787', '#238636'], // green
+      ['#79c0ff', '#1f6feb'], // blue
+      ['#ffa657', '#d29922'], // orange
+      ['#d2a8ff', '#6f42c1'], // purple
+      ['#ff9ec5', '#db2777'], // pink
+      ['#56d4dd', '#0e7490'], // cyan
+    ]
+
+    function hashString(str) {
+      let h = 0
+      for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0
+      return Math.abs(h)
+    }
+
+    function tagStyle(t) {
+      const type = t || ''
+      let pair = PRESET_TAG_COLORS[type]
+      if (!pair) {
+        const idx = categories.value.indexOf(type)
+        // In the list → color by position; orphan value → stable hash.
+        const key = idx >= 0 ? idx : hashString(type)
+        pair = TAG_PALETTE[key % TAG_PALETTE.length]
+      }
+      return { color: pair[0], borderColor: pair[1] }
     }
 
     // ---- Modals ----
@@ -581,7 +618,7 @@ export default {
       toastMsg, toastType, toastVisible,
       repoUrl, pageRange,
       doLogin, doLogout,
-      debouncedSearch, loadSentences, typeClass,
+      debouncedSearch, loadSentences, tagStyle,
       openAddModal, openEditModal, closeEditModal, saveSentence,
       openDeleteModal, closeDeleteModal, confirmDelete,
       startResize,

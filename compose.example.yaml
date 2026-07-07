@@ -8,7 +8,7 @@
 #   docker compose up -d
 #
 # Default admin login / 默认管理后台:
-#   http://your-host:37292  (user: root / pass: 666)
+#   http://your-host:37292  (user: root / 密码见下方 AUTH_PASSWORD，必须自行设置)
 
 version: "3.8"
 
@@ -53,5 +53,22 @@ services:
 
       # ---- Auth / 管理后台登录 ----
       - AUTH_USERNAME=root              # change it! / 请修改！
-      - AUTH_PASSWORD=666               # change it! / 请修改！
-      # - JWT_SECRET=your-32-byte-hex    # optional / 可选
+      - AUTH_PASSWORD=change-me         # 强烈建议修改！默认密码仅告警不拦截 / warns but still starts if left default
+      - JWT_SECRET=please-generate-a-32-byte-hex   # 固定密钥，避免重启后掉登录 / keep tokens valid across restarts
+      # - TOKEN_EXPIRY=24h              # 令牌有效期 / token lifetime
+
+      # ---- Security / 安全加固（公网部署建议开启）----
+      # 反代真实 IP：Lucky/Nginx 等反代后，容器看到的源 IP 是代理的 LAN 地址，
+      # 必须让 glean 从转发头还原真实客户端 IP，否则限流/防暴力会把所有人算作一个 IP。
+      # 推荐用 TRUSTED_PROXY_IPS 锁定可信代理（防局域网内伪造），而非无条件的 TRUST_PROXY。
+      # 填你的反代来源 IP（路由器/NAS 网关的 LAN 地址，如 192.168.1.1）。
+      - TRUSTED_PROXY_IPS=192.168.1.1   # your reverse-proxy LAN IP(s), comma-separated; supports CIDR
+      # - TRUST_PROXY=true                # 简单模式(无条件信任转发头)，仅当 glean 端口不对外暴露时用
+      # 诊断：首次部署后临时设为 true，从手机 4G 访问 /api/whoami 确认反代传了真实 IP，之后请关闭
+      # - WHOAMI_ENABLED=true
+      - RATE_LIMIT_ENABLED=true         # 全局接口限流（含随机文案接口）/ global rate limit
+      - RATE_LIMIT_WINDOW=60            # 限流窗口（秒）/ window in seconds
+      - RATE_LIMIT_MAX=120             # 单 IP 窗口内最大请求数 / max requests per IP per window
+      - LOGIN_LOCKOUT_ENABLED=true      # 登录暴力破解锁定 / brute-force lockout
+      - LOGIN_MAX_FAILS=5               # 连续失败次数触发锁定 / fails before lockout
+      - LOGIN_LOCKOUT_WINDOW=900        # 锁定时长（秒）/ lockout duration

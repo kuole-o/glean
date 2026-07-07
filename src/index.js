@@ -2,12 +2,14 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { compress } from 'hono/compress';
+import { secureHeaders } from 'hono/secure-headers';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { getDb, getAllSentences, getRandomSentence, getSentenceById, createSentence, updateSentence, deleteSentence, getStats } from './db.js';
 import { getCachedSentences, setCachedSentences, invalidateCache, getCacheStatus } from './cache.js';
 import { getCategories } from './categories.js';
 import { getSiteInfo } from './site.js';
-import { authMiddleware, handleLogin, handleVerify } from './auth.js';
+import { authMiddleware, handleLogin, handleVerify, checkAuthSecurity } from './auth.js';
+import { rateLimitMiddleware, getSecurityStatus, getClientDebugInfo } from './security.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -16,13 +18,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const PORT = parseInt(process.env.PORT || '6689', 10);
 const CACHE_SIZE = parseInt(process.env.CACHE_SIZE || '5000', 10);
-// ---- Helper: map DB hitokoto field to API content key ----
+// ---- Helper: map DB glean field to API content key ----
 function mapSentence(s) {
   if (!s) return s;
-  const { hitokoto, ...rest } = s;
-  return { content: hitokoto || '', ...rest };
+  const { content, ...rest } = s;
+  return { content: content || '', ...rest };
 }
 
+
+// ---- Startup security checks (may exit on insecure defaults) ----
+checkAuthSecurity();
 
 // Init DB on startup
 getDb();
@@ -30,10 +35,19 @@ console.log('[DB] SQLite initialized');
 
 const app = new Hono();
 
-// ---- Global: ensure all JSON responses include charset=utf-8 (mobile compat) ----
+// ---- Security headers (applied to every response) ----
+app.use('*', secureHeaders());
+
+// ---- Global: ensure all JSON responses carry charset=utf-8 (mobile/iOS compat) ----
+// Some strict clients (notably iOS Safari/WKWebView) render multibyte JSON as
+// garbage when the response omits an explicit charset. Hono's c.json() emits a
+// bare `application/json`, so we normalize any JSON content-type that lacks a
+// charset. Matching by prefix (not exact equality) keeps this robust to casing
+// and to future middleware that might tweak the header.
 app.use('*', async (c, next) => {
   await next();
-  if (c.res.headers.get('content-type') === 'application/json') {
+  const ct = c.res.headers.get('content-type');
+  if (ct && ct.toLowerCase().startsWith('application/json') && !/charset=/i.test(ct)) {
     c.res.headers.set('content-type', 'application/json; charset=utf-8');
   }
 });
@@ -46,6 +60,9 @@ app.use('*', cors({
   credentials: true,
 }));
 
+// ---- Rate limiting (all API routes, incl. public /api/random) ----
+app.use('/api/*', rateLimitMiddleware());
+
 // ---- Auth Middleware (protects all /api/* routes except public ones) ----
 app.use('/api/*', authMiddleware());
 
@@ -57,9 +74,19 @@ app.post('/api/auth/login', handleLogin);
 // POST /api/auth/verify — 验证令牌（页面刷新时用）
 app.post('/api/auth/verify', handleVerify);
 
+// GET /api/whoami — 诊断：回显代理转发的头与解析出的真实 IP（默认关闭）
+// 部署后临时开启 WHOAMI_ENABLED=true，从外网(如手机4G)访问一次以确认反代配置，
+// 确认无误后请关闭。只暴露访问者自己的 IP，无敏感信息。
+app.get('/api/whoami', (c) => {
+  if (process.env.WHOAMI_ENABLED !== 'true') {
+    return c.json({ code: 404, message: 'Not Found' }, 404);
+  }
+  return c.json({ code: 200, data: getClientDebugInfo(c) });
+});
+
 // ---- API Routes (all protected by authMiddleware) ----
 
-// GET /api/random — 核心随机一言（公开，middleware已放行）
+// GET /api/random — 核心随机句子（公开，middleware已放行）
 app.get('/api/random', async (c) => {
   const type = c.req.query('type');
   const format = c.req.query('format') || 'json';
@@ -89,17 +116,17 @@ app.get('/api/random', async (c) => {
   if (format === 'text') {
     c.header('Content-Type', 'text/plain; charset=utf-8');
     c.header('Cache-Control', 'no-cache');
-    return c.body(pick.hitokoto); // text format keeps raw
+    return c.body(pick.content); // text format keeps raw
   }
 
   const response = {
     id: pick.id,
-    content: pick.hitokoto,
+    content: pick.content,
     type: pick.type,
     from: pick.from_source,
     from_who: pick.from_who,
     created_at: pick.created_at,
-    length: pick.hitokoto.length,
+    length: pick.content.length,
   };
   return c.json(response);
 });
@@ -133,14 +160,19 @@ app.post('/api/sentences', async (c) => {
     return c.json({ code: 400, message: '无效的 JSON 请求体' }, 400);
   }
 
-  const content = body.content || body.hitokoto;
+  const content = body.content;
   if (!content || !content.trim()) {
     return c.json({ code: 400, message: '句子内容不能为空' }, 400);
   }
 
+  // Default to a real configured category (prefer 其他) so it isn't orphaned
+  // from the filter / tag colors.
+  const cats = getCategories();
+  const defaultType = cats.includes('其他') ? '其他' : (cats[0] || '其他');
+
   const sentence = createSentence({
-    hitokoto: content.trim(),
-    type: body.type || 'other',
+    content: content.trim(),
+    type: body.type || defaultType,
     from_source: body.from_source || '',
     from_who: body.from_who || '',
   });
@@ -161,9 +193,13 @@ app.put('/api/sentences/:id', async (c) => {
     return c.json({ code: 400, message: '无效的 JSON 请求体' }, 400);
   }
 
-  const contentVal = body.content ?? body.hitokoto;
+  const contentVal = body.content;
+  // If content is provided, it must not be blank (mirrors POST validation).
+  if (contentVal !== undefined && !String(contentVal).trim()) {
+    return c.json({ code: 400, message: '句子内容不能为空' }, 400);
+  }
   const updated = updateSentence(id, {
-    hitokoto: contentVal?.trim(),
+    content: contentVal !== undefined ? String(contentVal).trim() : undefined,
     type: body.type,
     from_source: body.from_source,
     from_who: body.from_who,
@@ -194,7 +230,7 @@ app.delete('/api/sentences/:id', async (c) => {
 app.get('/api/stats', (c) => {
   const stats = getStats();
   const cacheStatus = getCacheStatus();
-  return c.json({ code: 200, stats, cache: cacheStatus });
+  return c.json({ code: 200, stats, cache: cacheStatus, security: getSecurityStatus() });
 });
 
 // GET /api/categories — 分类列表
@@ -227,8 +263,10 @@ serve({
   fetch: app.fetch,
   port: PORT,
 }, (info) => {
+  const sec = getSecurityStatus();
   console.log(`[Server] 🚀 拾句 running on http://0.0.0.0:${PORT}`);
   console.log(`[Server] 📖 API: /api/random  |  Admin: /`);
   console.log(`[Server] 💾 Redis cache: DB ${getCacheStatus().db}`);
-  console.log(`[Server] 🔐 Auth enabled (default: root / 666)`);
+  console.log(`[Server] 🔐 Auth enabled  |  brute-force lockout: ${sec.loginLockout.enabled ? `on (${sec.loginLockout.maxFails} fails / ${sec.loginLockout.window}s)` : 'off'}`);
+  console.log(`[Server] 🚦 Rate limit: ${sec.rateLimit.enabled ? `${sec.rateLimit.max} req / ${sec.rateLimit.window}s per IP` : 'off'}  |  trust proxy: ${sec.trustProxy}`);
 });
